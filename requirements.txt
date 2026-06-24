@@ -1,0 +1,15 @@
+# FinSight — Phase 0 dependencies (Foundations & "hello, LLM")
+# Later phases will add: langchain, langgraph, langchain-chroma, fastapi,
+# uvicorn, beautifulsoup4, lxml, pytest. Kept minimal on purpose so Phase 0
+# installs fast and you only pull in what you're actually using yet.
+
+# Configuration / settings from environment + .env
+pydantic-settings>=2.4
+
+# LangChain base classes (BaseChatModel, Embeddings)
+langchain-core>=0.3
+
+# Provider integrations (chat models + embeddings)
+langchain-anthropic>=0.3
+langchain-openai>=0.2
+langchain-voyageai>=0.1
