@@ -35,7 +35,12 @@ class Settings(BaseSettings):
     )
 
     # Which provider powers BOTH the chat model and the embeddings.
-    llm_provider: Literal["anthropic", "openai"] = "anthropic"
+    #   anthropic / openai -> frontier (hosted, paid).
+    #   groq               -> hosted open-source (free tier, OpenAI-compatible API).
+    #   ollama             -> offline open-source running locally on your machine.
+    # Having all four behind one switch is what lets the Phase 5 eval harness
+    # compare frontier vs. hosted-OSS vs. local-OSS on the same questions.
+    llm_provider: Literal["anthropic", "openai", "groq", "ollama"] = "anthropic"
 
     # --- Anthropic (Claude) ---
     anthropic_api_key: str | None = None
@@ -50,6 +55,32 @@ class Settings(BaseSettings):
     voyage_api_key: str | None = None
     voyage_embed_model: str = "voyage-3"
 
+    # --- Groq (hosted open-source chat) ---
+    # Groq serves open models (Llama, etc.) behind an OpenAI-COMPATIBLE API, so the
+    # factory reuses ChatOpenAI and just points it at groq_base_url. Keeping the
+    # branch generic means switching to OpenRouter/Together later is only an env
+    # change (different base_url + key + model id), not new code. Groq has no
+    # embeddings API, so the Groq path pairs with local HuggingFace embeddings below.
+    groq_api_key: str | None = None
+    # Strong tool-use OSS model on Groq's free tier. NOTE: Groq rotates model ids —
+    # check https://console.groq.com/docs/models if this 400s.
+    groq_chat_model: str = "llama-3.3-70b-versatile"
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+
+    # --- Ollama (offline open-source, runs locally) ---
+    # No API key needed — talks to a local Ollama server. qwen2.5:7b has strong
+    # tool-use for its size and fits an M2 Pro comfortably; llama3.1:8b is an
+    # alternative, and qwen2.5:14b is viable on 32 GB machines. Pull models first:
+    #   ollama pull qwen2.5:7b && ollama pull nomic-embed-text
+    ollama_chat_model: str = "qwen2.5:7b"
+    ollama_embed_model: str = "nomic-embed-text"
+    ollama_base_url: str = "http://localhost:11434"
+
+    # --- HuggingFace embeddings (local, used by the Groq path) ---
+    # Sentence-transformers model that runs on-device (Metal on Apple Silicon),
+    # free and no key required. ~130 MB download on first use.
+    hf_embed_model: str = "BAAI/bge-small-en-v1.5"
+
     # --- Generation knobs ---
     # Temperature is intentionally optional. Newer Claude models (Opus 4.7/4.8,
     # Fable 5) reject a temperature parameter, so we only pass it when a value is
@@ -63,20 +94,27 @@ class Settings(BaseSettings):
     @property
     def chat_model_name(self) -> str:
         """The chat model id for the currently selected provider."""
-        return (
-            self.anthropic_chat_model
-            if self.llm_provider == "anthropic"
-            else self.openai_chat_model
-        )
+        return {
+            "anthropic": self.anthropic_chat_model,
+            "openai": self.openai_chat_model,
+            "groq": self.groq_chat_model,
+            "ollama": self.ollama_chat_model,
+        }[self.llm_provider]
 
     @property
     def embed_model_name(self) -> str:
-        """The embeddings model id for the currently selected provider."""
-        return (
-            self.voyage_embed_model
-            if self.llm_provider == "anthropic"
-            else self.openai_embed_model
-        )
+        """The embeddings model id for the currently selected provider.
+
+        This feeds the per-provider Chroma collection name (Phase 1+). Each
+        provider has its OWN embedding model and therefore its own vector space,
+        so keying the collection on this value keeps the four spaces from mixing.
+        """
+        return {
+            "anthropic": self.voyage_embed_model,
+            "openai": self.openai_embed_model,
+            "groq": self.hf_embed_model,  # Groq has no embeddings -> local HF
+            "ollama": self.ollama_embed_model,
+        }[self.llm_provider]
 
 
 def _mirror_keys_to_env(settings: Settings) -> None:
@@ -89,10 +127,12 @@ def _mirror_keys_to_env(settings: Settings) -> None:
     way the same code works whether you exported the key in your shell or put it
     in ``.env``. We never overwrite a value already present in the environment.
     """
+    # Ollama needs no key (local server); public HuggingFace models need none either.
     for env_name, value in {
         "ANTHROPIC_API_KEY": settings.anthropic_api_key,
         "OPENAI_API_KEY": settings.openai_api_key,
         "VOYAGE_API_KEY": settings.voyage_api_key,
+        "GROQ_API_KEY": settings.groq_api_key,
     }.items():
         if value and not os.environ.get(env_name):
             os.environ[env_name] = value

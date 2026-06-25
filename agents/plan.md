@@ -76,6 +76,15 @@ LangChain already abstracts providers, so "swappable" is cheap:
 > providers requires re-ingesting (different vector space). Document this; key the Chroma
 > collection name by provider to avoid silently mixing spaces.
 
+**Open-source providers (added Phase 0.5).** Beyond the two frontier providers, `LLM_PROVIDER`
+also accepts `groq` (hosted open-source — Llama 3.3 70B on Groq's free, OpenAI-compatible API;
+embeds locally with HuggingFace `bge-small` since Groq has no embeddings endpoint) and `ollama`
+(offline open-source running locally — `qwen2.5:7b` chat + `nomic-embed-text` embeddings). All
+four live behind the same `factory.py` switch. This sets up a strong Phase 5 story: run the same
+eval set across **frontier vs. hosted-OSS vs. local-OSS** and report the deltas. Caveat: reliable
+multi-step tool-calling (Phase 4) is the weak spot for small local models — Groq is the dependable
+agentic OSS path; Ollama is mainly for the offline/eval-comparison angle.
+
 ### Agent design
 - LangGraph `create_react_agent`-style tool-calling loop (or a small custom `StateGraph`).
 - System prompt instructs: always cite sources, use `calculate` for arithmetic, use

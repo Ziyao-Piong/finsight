@@ -11,5 +11,12 @@ langchain-core>=0.3
 
 # Provider integrations (chat models + embeddings)
 langchain-anthropic>=0.3
-langchain-openai>=0.2
+langchain-openai>=0.2          # also reused for the Groq path (OpenAI-compatible)
 langchain-voyageai>=0.1
+
+# Open-source providers: Groq is hosted (uses langchain-openai above + local HF
+# embeddings); Ollama runs models locally. sentence-transformers backs the local
+# HuggingFace embeddings used by the Groq path.
+langchain-ollama>=0.2
+langchain-huggingface>=0.1
+sentence-transformers>=3.0

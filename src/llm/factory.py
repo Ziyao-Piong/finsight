@@ -60,8 +60,42 @@ def get_chat_model(settings: Settings | None = None) -> BaseChatModel:
             kwargs["temperature"] = settings.llm_temperature
         return ChatOpenAI(**kwargs)
 
+    if provider == "groq":
+        # Groq's API is OpenAI-COMPATIBLE, so we reuse ChatOpenAI and just point it
+        # at Groq's base_url with the Groq key. This keeps the hosted-OSS branch
+        # vendor-generic — OpenRouter/Together would only need different env values.
+        from langchain_openai import ChatOpenAI
+
+        kwargs = {
+            "model": settings.groq_chat_model,
+            "base_url": settings.groq_base_url,
+            "api_key": settings.groq_api_key,
+            "max_tokens": settings.llm_max_tokens,
+            "streaming": True,
+        }
+        if settings.llm_temperature is not None:
+            kwargs["temperature"] = settings.llm_temperature
+        return ChatOpenAI(**kwargs)
+
+    if provider == "ollama":
+        # Fully local: talks to an Ollama server (default http://localhost:11434).
+        # Ollama caps generation length via `num_predict` (its name for max_tokens),
+        # and ChatOllama.bind_tools() provides the tool-calling used from Phase 4.
+        from langchain_ollama import ChatOllama
+
+        kwargs = {
+            "model": settings.ollama_chat_model,
+            "base_url": settings.ollama_base_url,
+            "num_predict": settings.llm_max_tokens,
+            "streaming": True,
+        }
+        if settings.llm_temperature is not None:
+            kwargs["temperature"] = settings.llm_temperature
+        return ChatOllama(**kwargs)
+
     raise ValueError(
-        f"Unknown LLM_PROVIDER: {provider!r} (expected 'anthropic' or 'openai')"
+        f"Unknown LLM_PROVIDER: {provider!r} "
+        "(expected 'anthropic', 'openai', 'groq', or 'ollama')"
     )
 
 
@@ -69,8 +103,10 @@ def get_embeddings(settings: Settings | None = None) -> Embeddings:
     """Return an embeddings model for the configured provider.
 
     Not exercised in Phase 0 (which only does chat), but defined now so the
-    provider switch lives in exactly one place. Anthropic has no first-party
-    embeddings model, so the Anthropic path uses Voyage AI.
+    provider switch lives in exactly one place. Note that two providers have no
+    embeddings API of their own: Anthropic pairs with Voyage AI, and Groq pairs
+    with a local HuggingFace (sentence-transformers) model. Ollama serves its
+    own embedding model locally.
 
     Args:
         settings: Optional settings override. Defaults to shared cached settings.
@@ -91,6 +127,23 @@ def get_embeddings(settings: Settings | None = None) -> Embeddings:
 
         return OpenAIEmbeddings(model=settings.openai_embed_model)
 
+    if provider == "groq":
+        # Groq has no embeddings endpoint, so the hosted-OSS path embeds locally
+        # with a sentence-transformers model (runs on Metal on Apple Silicon;
+        # ~130 MB download on first use, no key required).
+        from langchain_huggingface import HuggingFaceEmbeddings
+
+        return HuggingFaceEmbeddings(model_name=settings.hf_embed_model)
+
+    if provider == "ollama":
+        from langchain_ollama import OllamaEmbeddings
+
+        return OllamaEmbeddings(
+            model=settings.ollama_embed_model,
+            base_url=settings.ollama_base_url,
+        )
+
     raise ValueError(
-        f"Unknown LLM_PROVIDER: {provider!r} (expected 'anthropic' or 'openai')"
+        f"Unknown LLM_PROVIDER: {provider!r} "
+        "(expected 'anthropic', 'openai', 'groq', or 'ollama')"
     )
