@@ -20,3 +20,11 @@ langchain-voyageai>=0.1
 langchain-ollama>=0.2
 langchain-huggingface>=0.1
 sentence-transformers>=3.0
+
+# --- Phase 1 (Walking-skeleton RAG) ------------------------------------------
+# The retrieve -> augment -> generate loop over a single 10-K.
+langchain-chroma>=0.2          # persistent local vector store (pulls in chromadb)
+langchain-text-splitters>=0.3  # RecursiveCharacterTextSplitter (naive fixed-size chunking)
+beautifulsoup4>=4.12           # HTML -> text extraction
+lxml>=5.0                      # fast parser backend for BeautifulSoup
+requests>=2.31                 # fetch the filing from SEC EDGAR

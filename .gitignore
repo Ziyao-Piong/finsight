@@ -17,6 +17,9 @@ env/
 # Vector store (built locally from Phase 1 on)
 .chroma/
 
+# Downloaded filings cache (large, re-fetchable from EDGAR)
+data/
+
 # Tooling / OS
 .pytest_cache/
 .mypy_cache/

@@ -91,6 +91,34 @@ class Settings(BaseSettings):
     # --- Storage (used from Phase 1 onward) ---
     chroma_dir: str = ".chroma"
 
+    # --- Retrieval / chunking (Phase 1) ---
+    # Naive fixed-size chunking knobs. chunk_size is in characters (not tokens) —
+    # RecursiveCharacterTextSplitter counts characters by default. chunk_overlap
+    # repeats a slice of the previous chunk so an answer that straddles a boundary
+    # isn't split in half. retrieval_k is how many chunks we stuff into the prompt.
+    # These are deliberately simple; Phase 2/3 revisit chunking and retrieval.
+    chunk_size: int = 1000
+    chunk_overlap: int = 150
+    retrieval_k: int = 4
+
+    # SEC EDGAR requires a descriptive User-Agent that identifies you with contact
+    # info; requests without one are throttled or rejected (403). See
+    # https://www.sec.gov/os/webmaster-faq#developers .
+    edgar_user_agent: str = "FinSight learning project ziyaopiong@gmail.com"
+
+    @property
+    def collection_name(self) -> str:
+        """Chroma collection name, keyed by provider + embedding model.
+
+        The embedding model defines the vector space, so two providers' vectors
+        must never share a collection (their numbers aren't comparable). Keying the
+        name on the provider and embed model gives each its own collection and makes
+        the "switching providers requires re-ingesting" rule structural rather than
+        a thing you have to remember.
+        """
+        slug = self.embed_model_name.replace("/", "_").replace(":", "_")
+        return f"finsight_{self.llm_provider}_{slug}"
+
     @property
     def chat_model_name(self) -> str:
         """The chat model id for the currently selected provider."""
