@@ -1,6 +1,7 @@
 # FinSight — Financial Document Intelligence Agent
 
-> **Status:** Phase 0 (Foundations) in progress. Phases 1–7 not yet started.
+> **Status:** Phases 0–2 built (Foundations, walking-skeleton RAG, production-shaped
+> ingestion). Phases 3–7 not yet started.
 > This is the living project plan. Phase-specific learning guides live in `phase/`.
 
 ## Context

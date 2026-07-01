@@ -28,3 +28,10 @@ langchain-text-splitters>=0.3  # RecursiveCharacterTextSplitter (naive fixed-siz
 beautifulsoup4>=4.12           # HTML -> text extraction
 lxml>=5.0                      # fast parser backend for BeautifulSoup
 requests>=2.31                 # fetch the filing from SEC EDGAR
+
+# --- Phase 2 (Production-shaped ingestion) -----------------------------------
+# Multi-document EDGAR pipeline with section-aware chunking + metadata. Phase 2
+# is the first test-driven phase, so pytest arrives here. The fetch/parse/chunk
+# code reuses requests + beautifulsoup4 + langchain-text-splitters from above
+# (no new runtime deps — section parsing is hand-rolled on purpose).
+pytest>=8.0                    # test runner; tests written first (test_chunk.py, test_parse.py)

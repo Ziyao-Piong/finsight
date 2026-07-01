@@ -11,7 +11,7 @@ It is built in **iterative phases** (a "walking skeleton" model): Phase 1 stands
 - `agents/plan.md` — the living master plan: full target architecture, all 8 phases (0–7), and end-to-end verification steps. **Read this to understand where any piece fits.**
 - `phase/phase_N.md` — per-phase learning guide written for the human owner (concepts, setup, run, design rationale). Phase guides explain *why*, not just *what*.
 
-**Current status: Phase 0 complete** (project skeleton + swappable LLM interface). Only `src/config.py`, `src/llm/factory.py`, and `scripts/hello_llm.py` exist. The directories in `agents/plan.md`'s architecture (`ingest/`, `retrieval/`, `agent/`, `api/`, `web/`, `eval/`, `tests/`) are **not built yet** — that tree is the destination, not the current state.
+**Current status: Phase 2 complete** (production-shaped ingestion). Built so far: Phase 0 skeleton (`src/config.py`, `src/llm/factory.py`, `scripts/hello_llm.py`), Phase 1 walking-skeleton RAG (`src/rag.py`, `scripts/ask.py`), and Phase 2's `src/ingest/` pipeline (`edgar.py`, `parse.py`, `chunk.py`, `store.py`) with `tests/` (`test_parse.py`, `test_chunk.py`) and a multi-document `scripts/ingest.py`. Still **not built yet** (destination, not current state): `retrieval/`, `agent/`, `api/`, `web/`, `eval/`.
 
 ## Commands
 
@@ -32,7 +32,7 @@ python -m scripts.hello_llm "Explain what a 10-K filing is in two sentences."
 
 **Always run modules with `python -m <module>`, not `python path/to/file.py`.** The `-m` form puts the repo root on `sys.path` so `from src...` imports resolve; running a file directly will raise `ModuleNotFoundError: No module named 'src'`.
 
-`requirements.txt` is kept **minimal on purpose** — it currently holds only Phase 0 deps. Add heavier libraries (langchain, langgraph, langchain-chroma, fastapi, uvicorn, beautifulsoup4/lxml, pytest) in the phase that first needs them, not ahead of time.
+`requirements.txt` is kept **minimal on purpose** — it grows one phase at a time (currently through Phase 2: RAG + ingest + pytest). Add heavier libraries (langgraph, fastapi, uvicorn) in the phase that first needs them, not ahead of time.
 
 ## Architecture (current code)
 
