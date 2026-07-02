@@ -9,7 +9,9 @@ Split in three, mirroring conftest's offline philosophy (no network, no API keys
 
 from __future__ import annotations
 
-from src.retrieval.retriever import RetrievalFilter, _build_where
+from langchain_core.documents import Document
+
+from src.retrieval.retriever import Citation, RetrievalFilter, _build_where, _document_to_citation
 
 
 def test_no_filter_returns_none():
@@ -41,3 +43,35 @@ def test_multiple_fields_combine_with_and():
 def test_empty_lists_are_ignored():
     # An explicitly-empty list means "no constraint", same as None.
     assert _build_where(RetrievalFilter(tickers=[], sections=[])) is None
+
+
+def test_document_maps_to_citation_with_all_fields():
+    doc = Document(
+        page_content="TOKEN_RISK macroeconomic conditions and competition.",
+        id="NVDA-2024-10-k-risk-factors-42",
+        metadata={
+            "company": "NVIDIA Corporation",
+            "ticker": "NVDA",
+            "form_type": "10-K",
+            "fiscal_year": 2024,
+            "section": "Risk Factors",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/x.htm",
+            "char_start": 1000,
+            "char_end": 1052,
+            "chunk_index": 42,
+        },
+    )
+    c = _document_to_citation(doc, score=0.23)
+    assert c == Citation(
+        company="NVIDIA Corporation",
+        ticker="NVDA",
+        form_type="10-K",
+        fiscal_year=2024,
+        section="Risk Factors",
+        chunk_id="NVDA-2024-10-k-risk-factors-42",
+        char_start=1000,
+        char_end=1052,
+        source_url="https://www.sec.gov/Archives/edgar/data/1045810/x.htm",
+        snippet="TOKEN_RISK macroeconomic conditions and competition.",
+        score=0.23,
+    )

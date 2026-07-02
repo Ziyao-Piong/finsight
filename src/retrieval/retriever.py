@@ -38,6 +38,30 @@ class RetrievalFilter:
     form_types: list[str] | None = None
 
 
+@dataclass(frozen=True)
+class Citation:
+    """One retrieved passage plus the source locators needed to cite it.
+
+    This is the stable contract the Phase 6 API/web layer renders as an expandable
+    source. Built from a chunk's metadata (written by :mod:`src.ingest.chunk`) plus the
+    chunk text as ``snippet``. ``char_start``/``char_end`` locate the passage in the
+    cleaned filing text; ``score`` is Chroma's similarity distance (lower = closer),
+    ``None`` when the caller didn't ask for scores.
+    """
+
+    company: str
+    ticker: str
+    form_type: str
+    fiscal_year: int
+    section: str
+    chunk_id: str
+    char_start: int
+    char_end: int
+    source_url: str
+    snippet: str
+    score: float | None = None
+
+
 # Maps a RetrievalFilter field to the chunk-metadata key it constrains.
 _FILTER_FIELDS: tuple[tuple[str, str], ...] = (
     ("tickers", "ticker"),
@@ -70,6 +94,28 @@ def _build_where(filter: RetrievalFilter | None) -> dict | None:  # noqa: A002
     if len(clauses) == 1:
         return clauses[0]
     return {"$and": clauses}
+
+
+def _document_to_citation(doc, score: float | None) -> Citation:
+    """Map a retrieved LangChain ``Document`` (+ score) to a :class:`Citation`.
+
+    ``doc.id`` is the deterministic chunk id Chroma stored at ingest time
+    (``TICKER-YEAR-FORM-SECTION-INDEX``); the rest come from the chunk metadata.
+    """
+    meta = doc.metadata
+    return Citation(
+        company=meta["company"],
+        ticker=meta["ticker"],
+        form_type=meta["form_type"],
+        fiscal_year=meta["fiscal_year"],
+        section=meta["section"],
+        chunk_id=doc.id,
+        char_start=meta["char_start"],
+        char_end=meta["char_end"],
+        source_url=meta["source_url"],
+        snippet=doc.page_content,
+        score=score,
+    )
 
 
 def get_vectorstore(settings: Settings | None = None):
