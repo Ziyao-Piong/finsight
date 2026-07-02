@@ -63,3 +63,19 @@ def test_ask_with_no_results_returns_empty_citations(monkeypatch):
     assert isinstance(answer, Answer)
     assert answer.citations == []
     assert "ingest" in answer.text.lower()
+
+
+def test_format_sources_lists_numbered_citations():
+    from scripts.ask import format_sources
+
+    out = format_sources([_citation("NVDA", 2024, "MD&A"), _citation("NVDA", 2023, "Risk Factors")])
+    assert "Sources" in out
+    assert "[1] NVIDIA Corporation 10-K FY2024 — MD&A" in out
+    assert "[2] NVIDIA Corporation 10-K FY2023 — Risk Factors" in out
+    assert "NVDA-2024-10-k-MD&A-1" in out  # chunk id shown for verifiability
+
+
+def test_format_sources_empty_is_blank():
+    from scripts.ask import format_sources
+
+    assert format_sources([]) == ""
