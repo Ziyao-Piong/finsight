@@ -29,6 +29,9 @@ from src.config import Settings, get_settings
 from src.llm.factory import get_chat_model
 from src.retrieval.retriever import Citation, RetrievalFilter, get_vectorstore, retrieve
 
+# Instruction that keeps the model honest: answer from the retrieved passages, and
+# admit when they don't contain the answer instead of inventing one. Grounding +
+# refusal is the behaviour every later phase builds on.
 _SYSTEM_PROMPT = (
     "You are FinSight, a financial-filings assistant. Answer the user's question "
     "using ONLY the context passages provided below, which are excerpts from an SEC "

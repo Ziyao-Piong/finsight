@@ -63,4 +63,3 @@ Two hard rules define the structure; preserve them as the project grows:
 ## Contributing
 
 - hide yourself when commit
-- pytest is approved automatically
