@@ -16,7 +16,60 @@ testable and avoids building the agent twice.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from src.config import Settings, get_settings
+
+
+@dataclass(frozen=True)
+class RetrievalFilter:
+    """Explicit metadata constraints for a retrieval call.
+
+    Every field is optional; ``None`` or an empty list means "don't constrain on this
+    field". The field names match the chunk metadata written by
+    :mod:`src.ingest.chunk` (``ticker``, ``fiscal_year``, ``section``, ``form_type``).
+    The caller supplies these — parsing them from a natural-language question is the
+    Phase 4 agent's job.
+    """
+
+    tickers: list[str] | None = None
+    fiscal_years: list[int] | None = None
+    sections: list[str] | None = None
+    form_types: list[str] | None = None
+
+
+# Maps a RetrievalFilter field to the chunk-metadata key it constrains.
+_FILTER_FIELDS: tuple[tuple[str, str], ...] = (
+    ("tickers", "ticker"),
+    ("fiscal_years", "fiscal_year"),
+    ("sections", "section"),
+    ("form_types", "form_type"),
+)
+
+
+def _build_where(filter: RetrievalFilter | None) -> dict | None:  # noqa: A002
+    """Translate a :class:`RetrievalFilter` into a Chroma ``where`` clause.
+
+    Chroma's query language uses ``$in`` for "value is one of" and requires ``$and`` to
+    combine conditions on more than one field (a bare multi-key dict is not valid). So:
+      * no active fields          -> ``None`` (unfiltered search)
+      * exactly one active field  -> ``{field: {"$in": [...]}}``
+      * two or more active fields -> ``{"$and": [clause, clause, ...]}``
+    """
+    if filter is None:
+        return None
+
+    clauses: list[dict] = []
+    for attr, meta_key in _FILTER_FIELDS:
+        values = getattr(filter, attr)
+        if values:  # skip None and empty lists
+            clauses.append({meta_key: {"$in": list(values)}})
+
+    if not clauses:
+        return None
+    if len(clauses) == 1:
+        return clauses[0]
+    return {"$and": clauses}
 
 
 def get_vectorstore(settings: Settings | None = None):
