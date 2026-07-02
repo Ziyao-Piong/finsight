@@ -9,9 +9,100 @@ Split in three, mirroring conftest's offline philosophy (no network, no API keys
 
 from __future__ import annotations
 
-from langchain_core.documents import Document
+import hashlib
 
-from src.retrieval.retriever import Citation, RetrievalFilter, _build_where, _document_to_citation
+import pytest
+from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
+
+from src.retrieval.retriever import Citation, RetrievalFilter, _build_where, _document_to_citation, retrieve
+
+
+class FakeEmbeddings(Embeddings):
+    """Deterministic, offline embeddings for tests.
+
+    Maps text to a fixed-length vector by hashing whitespace tokens into buckets
+    (hashlib, so it's stable across processes). Semantic quality is irrelevant here:
+    these tests assert metadata *filtering*, not ranking.
+    """
+
+    dim = 32
+
+    def _embed(self, text: str) -> list[float]:
+        vec = [0.0] * self.dim
+        for tok in text.lower().split():
+            bucket = int(hashlib.md5(tok.encode()).hexdigest(), 16) % self.dim
+            vec[bucket] += 1.0
+        return vec
+
+    def embed_documents(self, texts):
+        return [self._embed(t) for t in texts]
+
+    def embed_query(self, text):
+        return self._embed(text)
+
+
+def _meta(company, ticker, year, section, idx):
+    return {
+        "company": company,
+        "ticker": ticker,
+        "form_type": "10-K",
+        "fiscal_year": year,
+        "section": section,
+        "source_url": f"https://sec.gov/{ticker}/{year}.htm",
+        "char_start": idx * 100,
+        "char_end": idx * 100 + 50,
+        "chunk_index": idx,
+    }
+
+
+@pytest.fixture
+def fake_store(tmp_path, monkeypatch):
+    """A tiny Chroma over 4 known chunks (2 tickers x 2 years), fake embeddings."""
+    from langchain_chroma import Chroma
+
+    store = Chroma(
+        collection_name="test_retriever",
+        embedding_function=FakeEmbeddings(),
+        persist_directory=str(tmp_path),
+    )
+    rows = [
+        ("NVIDIA Corporation", "NVDA", 2023, "Risk Factors", "supply chain risk competition"),
+        ("NVIDIA Corporation", "NVDA", 2024, "MD&A", "revenue grew driven by data center"),
+        ("Apple Inc.", "AAPL", 2023, "Risk Factors", "supply chain risk competition"),
+        ("Apple Inc.", "AAPL", 2024, "MD&A", "services revenue increased year over year"),
+    ]
+    texts = [text for *_, text in rows]
+    metas = [_meta(co, tk, yr, sec, i) for i, (co, tk, yr, sec, _) in enumerate(rows)]
+    ids = [f"{tk}-{yr}-10-k-{i}" for i, (_, tk, yr, _, _) in enumerate(rows)]
+    store.add_texts(texts=texts, metadatas=metas, ids=ids)
+
+    # retrieve() calls the module-level get_vectorstore; point it at our fake store.
+    monkeypatch.setattr("src.retrieval.retriever.get_vectorstore", lambda settings=None: store)
+    return store
+
+
+def test_retrieve_unfiltered_returns_citations_across_filings(fake_store):
+    cites = retrieve("revenue and risk", k=10)
+    assert cites, "expected some citations"
+    assert all(isinstance(c, Citation) for c in cites)
+    tickers = {c.ticker for c in cites}
+    assert tickers == {"NVDA", "AAPL"}  # unfiltered spans both companies
+
+
+def test_retrieve_filters_by_ticker(fake_store):
+    cites = retrieve("revenue and risk", filter=RetrievalFilter(tickers=["NVDA"]), k=10)
+    assert cites
+    assert all(c.ticker == "NVDA" for c in cites)
+
+
+def test_retrieve_filters_by_ticker_and_year(fake_store):
+    cites = retrieve(
+        "revenue", filter=RetrievalFilter(tickers=["NVDA"], fiscal_years=[2024]), k=10
+    )
+    assert cites
+    assert all(c.ticker == "NVDA" and c.fiscal_year == 2024 for c in cites)
+    assert {c.section for c in cites} == {"MD&A"}  # NVDA 2024 chunk is the MD&A one
 
 
 def test_no_filter_returns_none():

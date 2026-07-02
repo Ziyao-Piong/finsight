@@ -118,6 +118,28 @@ def _document_to_citation(doc, score: float | None) -> Citation:
     )
 
 
+def retrieve(
+    query: str,
+    *,
+    filter: RetrievalFilter | None = None,  # noqa: A002
+    k: int | None = None,
+    settings: Settings | None = None,
+) -> list[Citation]:
+    """Return the top-``k`` passages matching ``query`` under the given metadata filter.
+
+    Embeds the query, runs a metadata-filtered similarity search over the provider's
+    Chroma collection, and returns :class:`Citation` objects carrying the source locators
+    an answer needs to cite. ``k`` defaults to ``settings.retrieval_k``.
+    """
+    settings = settings or get_settings()
+    k = k or settings.retrieval_k
+
+    store = get_vectorstore(settings)
+    where = _build_where(filter)
+    results = store.similarity_search_with_score(query, k=k, filter=where)
+    return [_document_to_citation(doc, score) for doc, score in results]
+
+
 def get_vectorstore(settings: Settings | None = None):
     """Return the persistent Chroma vector store for the current provider.
 
