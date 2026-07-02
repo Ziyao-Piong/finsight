@@ -1,7 +1,7 @@
 # FinSight — Financial Document Intelligence Agent
 
-> **Status:** Phases 0–2 built (Foundations, walking-skeleton RAG, production-shaped
-> ingestion). Phases 3–7 not yet started.
+> **Status:** Phases 0–3 built (Foundations, walking-skeleton RAG, production-shaped
+> ingestion, metadata-filtered retrieval + citations). Phases 4–7 not yet started.
 > This is the living project plan. Phase-specific learning guides live in `phase/`.
 
 ## Context
@@ -144,6 +144,8 @@ estimates are rough and sum to the 40–60h budget.
 - **Learn:** retrieval quality, metadata filtering, grounding & citation rendering.
 - **Milestone:** answers cite exact, correctly-attributed passages.
 - **Verify:** `pytest tests/test_retriever.py` — relevant passages with correct metadata (TDD).
+- **Status: ✅ Built.** `src/retrieval/retriever.py` (`RetrievalFilter`, `_build_where`,
+  `Citation`, `retrieve`); `ask()` returns an `Answer` with citations; `tests/test_retriever.py`.
 
 ### Phase 4 — Agentic tools (8–12h)  ← the AI/ML-Engineer centerpiece
 - **Goal:** Turn the pipeline into an agent that reasons across multiple steps and documents.

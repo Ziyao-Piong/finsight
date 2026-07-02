@@ -11,7 +11,12 @@ It is built in **iterative phases** (a "walking skeleton" model): Phase 1 stands
 - `agents/plan.md` — the living master plan: full target architecture, all 8 phases (0–7), and end-to-end verification steps. **Read this to understand where any piece fits.**
 - `phase/phase_N.md` — per-phase learning guide written for the human owner (concepts, setup, run, design rationale). Phase guides explain *why*, not just *what*.
 
-**Current status: Phase 2 complete** (production-shaped ingestion). Built so far: Phase 0 skeleton (`src/config.py`, `src/llm/factory.py`, `scripts/hello_llm.py`), Phase 1 walking-skeleton RAG (`src/rag.py`, `scripts/ask.py`), and Phase 2's `src/ingest/` pipeline (`edgar.py`, `parse.py`, `chunk.py`, `store.py`) with `tests/` (`test_parse.py`, `test_chunk.py`) and a multi-document `scripts/ingest.py`. Still **not built yet** (destination, not current state): `retrieval/`, `agent/`, `api/`, `web/`, `eval/`.
+**Current status: Phase 3 complete** (metadata-filtered retrieval + citations). Built so
+far: Phase 0 skeleton, Phase 1 walking-skeleton RAG, Phase 2's `src/ingest/` pipeline, and
+Phase 3's `src/retrieval/retriever.py` (`RetrievalFilter`, `_build_where`, `Citation`,
+`retrieve`) with `ask()` returning an `Answer` (text + citations) and
+`tests/test_retriever.py` / `tests/test_rag.py`. Still **not built yet**: `agent/`, `api/`,
+`web/`, `eval/`.
 
 ## Commands
 
@@ -58,3 +63,4 @@ Two hard rules define the structure; preserve them as the project grows:
 ## Contributing
 
 - hide yourself when commit
+- pytest is approved automatically
