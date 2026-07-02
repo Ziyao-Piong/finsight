@@ -8,7 +8,7 @@ wiring stays shared with the query side.
 
 Two deliberate reuse choices keep Phase 2 consistent with the rest of the app:
 
-* We persist through :func:`src.rag.get_vectorstore`, the *same* handle the query path
+* We persist through :func:`src.retrieval.retriever.get_vectorstore`, the *same* handle the query path
   uses, so ingestion and retrieval can never disagree about the collection name,
   embedding function, or persist directory.
 * We pass each chunk's deterministic id to ``add_texts``. Chroma treats matching ids as
@@ -25,7 +25,7 @@ from src.ingest import chunk as chunk_mod
 from src.ingest import edgar, parse
 from src.ingest.edgar import FilingRef
 from src.ingest.parse import Section
-from src.rag import get_vectorstore
+from src.retrieval.retriever import get_vectorstore
 
 # Embedding a few thousand chunks in one call is fragile against a local embedder: the
 # Ollama model runner can drop the connection mid-batch, losing the whole ingest. We

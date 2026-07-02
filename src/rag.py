@@ -24,7 +24,8 @@ from __future__ import annotations
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.config import Settings, get_settings
-from src.llm.factory import get_chat_model, get_embeddings
+from src.llm.factory import get_chat_model
+from src.retrieval.retriever import get_vectorstore
 
 # Instruction that keeps the model honest: answer from the retrieved passages, and
 # admit when they don't contain the answer instead of inventing one. Grounding +
@@ -36,27 +37,6 @@ _SYSTEM_PROMPT = (
     "information from the filing to answer — do not use outside knowledge or guess. "
     "Be concise and factual."
 )
-
-
-def get_vectorstore(settings: Settings | None = None):
-    """Return the persistent Chroma vector store for the current provider.
-
-    Both ingestion (writing chunks) and querying (reading them) go through this one
-    function so they always agree on three things: the persist directory, the
-    embedding function, and the collection name. The collection name is keyed by
-    provider (see ``Settings.collection_name``) because each provider's embeddings
-    live in their own, incomparable vector space.
-    """
-    settings = settings or get_settings()
-    # Imported lazily so importing this module doesn't require chromadb until you
-    # actually build or query an index (mirrors the factory's lazy-import style).
-    from langchain_chroma import Chroma
-
-    return Chroma(
-        collection_name=settings.collection_name,
-        embedding_function=get_embeddings(settings),
-        persist_directory=settings.chroma_dir,
-    )
 
 
 def _format_context(docs) -> str:
